@@ -74,6 +74,8 @@ function TodoPage({ user, onLogout }) {
   const [todos, setTodos] = useState(readTodos);
   const [draft, setDraft] = useState('');
   const [filter, setFilter] = useState('All');
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
@@ -100,6 +102,25 @@ function TodoPage({ user, onLogout }) {
 
   function deleteTodo(id) {
     setTodos((current) => current.filter((todo) => todo.id !== id));
+    if (editingId === id) setEditingId(null);
+  }
+
+  function startEditing(todo) {
+    setEditingId(todo.id);
+    setEditDraft(todo.title);
+  }
+
+  function saveEdit(event) {
+    event.preventDefault();
+    const title = editDraft.trim();
+    if (!title) return;
+    setTodos((current) => current.map((todo) => todo.id === editingId ? { ...todo, title } : todo));
+    setEditingId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft('');
   }
 
   return (
@@ -134,7 +155,17 @@ function TodoPage({ user, onLogout }) {
             <article className={`todo-row ${todo.completed ? 'is-completed' : ''}`} key={todo.id}>
               <button className="check-button" onClick={() => toggleTodo(todo.id)} aria-label={todo.completed ? `Mark ${todo.title} active` : `Complete ${todo.title}`} aria-pressed={todo.completed}>{todo.completed && <span aria-hidden="true">✓</span>}</button>
               <span className="todo-index">{String(index + 1).padStart(2, '0')}</span>
-              <span className="todo-title">{todo.title}</span>
+              {editingId === todo.id ? (
+                <form className="edit-form" onSubmit={saveEdit}>
+                  <label className="visually-hidden" htmlFor={`edit-${todo.id}`}>Edit task</label>
+                  <input id={`edit-${todo.id}`} autoFocus maxLength={160} value={editDraft} onChange={(event) => setEditDraft(event.target.value)} />
+                  <button className="edit-action save-edit" type="submit" disabled={!editDraft.trim()}>Save</button>
+                  <button className="edit-action" type="button" onClick={cancelEdit}>Cancel</button>
+                </form>
+              ) : (
+                <span className="todo-title">{todo.title}</span>
+              )}
+              {editingId !== todo.id && <button className="edit-button" onClick={() => startEditing(todo)} aria-label={`Edit ${todo.title}`} title="Edit task">✎</button>}
               <button className="delete-button" onClick={() => deleteTodo(todo.id)} aria-label={`Delete ${todo.title}`} title="Delete task">×</button>
             </article>
           )) : (
